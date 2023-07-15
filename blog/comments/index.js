@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { randomBytes }  = require('crypto');
-const cors = require('cors')
+const { randomBytes } = require('crypto');
+const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
@@ -10,9 +10,9 @@ app.use(cors());
 
 const commentsByPostId = {}; // { sdja1245: [{ id: sqws12, content: good post }], ewe23sd: [ coomet1, comment2 ] }
 
-app.get('/posts/:id/comments', ( req, res ) => {
+app.get('/posts/:id/comments', (req, res) => {
     res.send(commentsByPostId[req.params.id] || []);
-})
+});
 
 app.post('/posts/:id/comments', async (req, res) => {
     const commentId = randomBytes(4).toString('hex');
@@ -20,21 +20,38 @@ app.post('/posts/:id/comments', async (req, res) => {
 
     const comments = commentsByPostId[req.params.id] || [];
 
-    comments.push({ id: commentId, content })
+    comments.push({ id: commentId, content, status: 'pending' });
 
     commentsByPostId[req.params.id] = comments;
 
-    await axios.post('http://127.0.0.1:4005/events', {type: 'CommentCreated', data: { id: commentId, content, postId: req.params.id }})
+    await axios.post('http://127.0.0.1:4005/events', {
+        type: 'CommentCreated',
+        data: { id: commentId, content, postId: req.params.id, status: 'pending' },
+    });
 
     res.status(201).send(comments);
 });
 
-app.post('/events', (req, res) => {
-   console.log('Event recieved', req.body.type)
+app.post('/events', async (req, res) => {
+    console.log('Event recieved from Event Bus in Comments Service: ', req.body.type);
 
-   res.send({ status: 'OK' })
-})
+    const { type, data } = req.body;
+
+    if (type === 'CommentModerated') {
+        const { postId, id, status, content } = data;
+        const comments = commentsByPostId[postId];
+        const comment = comments.find(comment => comment.id === id);
+        comment.status = status;
+
+        await axios.post('http://127.0.0.1:4005/events', {
+            type: 'CommentUpdated',
+            data: { id, status, postId, content }
+        })
+    }
+
+    res.send({ status: 'OK' });
+});
 
 app.listen(4001, () => {
     console.log('Comments microservice is up and listening on port 4001');
-})
+});

@@ -6,8 +6,9 @@ import CommentList from './CommentList';
 const PostList = () => {
     const [posts, setPosts] = useState({});
 
+    // fetches posts from only query service
     const fetchPosts = async () => {
-        const res = await axios.get('http://127.0.0.1:4002/posts');
+        const res = await axios.get('http://127.0.0.1:4002/posts'); // query service
         setPosts(res.data);
     };
 
