@@ -14,6 +14,8 @@ app.get('/posts/:id/comments', (req, res) => {
     res.send(commentsByPostId[req.params.id] || []);
 });
 
+// POST request
+// including postID in it
 app.post('/posts/:id/comments', async (req, res) => {
     const commentId = randomBytes(4).toString('hex');
     const { content } = req.body;
@@ -22,6 +24,7 @@ app.post('/posts/:id/comments', async (req, res) => {
 
     comments.push({ id: commentId, content, status: 'pending' });
 
+    // { postID: [comments], postID1: [comments] }
     commentsByPostId[req.params.id] = comments;
 
     await axios.post('http://127.0.0.1:4005/events', {
